@@ -213,7 +213,7 @@
 			<div class="blog">
 				<img
 					title="前往我的博客"
-					src="../src/assets/water.png"
+					src="~/assets/water.png"
 					@click="goToBlog"
 				/>
 			</div>
