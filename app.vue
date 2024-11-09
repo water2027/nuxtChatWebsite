@@ -444,7 +444,7 @@ const createNewChat = () => {
 	};
 	isFirst.value = true;
 };
-const sendMsgToService = () => {
+const sendMsgToService = async () => {
 	let content = inputMsg.value.value;
 	if (!content) return;
 
@@ -467,27 +467,32 @@ const sendMsgToService = () => {
 		});
 	}
 	inputMsg.value.value = '';
-	fetch('/api/chat', {
+	const res = await fetch('/api/chat', {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
+			accept: '*/*',
 		},
 		body: JSON.stringify({
 			model: model.value,
 			messages: currentChat.value.content,
 		}),
-	})
-		.then((res) => res.json())
-		.then((res) => {
-			currentChat.value.content.push({
-				role: 'assistant',
-				content: res.content,
-			});
-			localStorage.setItem(
-				'chatHistory',
-				JSON.stringify(chatHistory.value)
-			);
-		});
+	});
+	const decoder = new TextDecoder('utf-8');
+	for await (const value of res.body) {
+		try{
+			const chunk = decoder.decode(value);
+			newText.value += chunk;
+		}catch(e){
+			console.error(e);
+		}
+	}
+	currentChat.value.content.push({
+		role: 'assistant',
+		content: newText.value,
+	});
+	newText.value = '';
+	localStorage.setItem('chatHistory', JSON.stringify(chatHistory.value));
 };
 
 const usePrompt = (id) => {
@@ -581,155 +586,158 @@ onMounted(() => {
 });
 </script>
 <style>
-html{
+html {
 	width: 100%;
 }
-body{
+body {
 	margin: 0;
 	padding: 0;
 	width: 100%;
 	overflow: hidden;
 }
 .left {
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 17%;
-  background-color: #f8f9fa;
-  border-right: 1px solid #e9ecef;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  transition: width 0.3s ease;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+	position: fixed;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 17%;
+	background-color: #f8f9fa;
+	border-right: 1px solid #e9ecef;
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	transition: width 0.3s ease;
+	box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
 }
 
 .top {
-  display: flex;
-  justify-content: space-between;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e9ecef;
+	display: flex;
+	justify-content: space-between;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid #e9ecef;
 }
 
 .asideButton {
-  background: none;
-  border: none;
-  padding: 0.5rem;
-  cursor: pointer;
-  color: #6c757d;
-  border-radius: 0.375rem;
-  transition: all 0.2s ease;
+	background: none;
+	border: none;
+	padding: 0.5rem;
+	cursor: pointer;
+	color: #6c757d;
+	border-radius: 0.375rem;
+	transition: all 0.2s ease;
 }
 
 .asideButton:hover {
-  background-color: #e9ecef;
-  color: #212529;
-  transform: scale(1.05);
+	background-color: #e9ecef;
+	color: #212529;
+	transform: scale(1.05);
 }
 
 .selection {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e0 #f8f9fa;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e0 #f8f9fa;
 }
 
 .selection::-webkit-scrollbar {
-  width: 6px;
+	width: 6px;
 }
 
 .selection::-webkit-scrollbar-track {
-  background: #f8f9fa;
+	background: #f8f9fa;
 }
 
 .selection::-webkit-scrollbar-thumb {
-  background-color: #cbd5e0;
-  border-radius: 3px;
+	background-color: #cbd5e0;
+	border-radius: 3px;
 }
 
-.prompt, .bottom {
-  margin-top: 1rem;
+.prompt,
+.bottom {
+	margin-top: 1rem;
 }
 
-.prompt li, .bottom li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem;
-  margin: 0.35rem 0;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
+.prompt li,
+.bottom li {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.75rem;
+	margin: 0.35rem 0;
+	border-radius: 0.5rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	border: 1px solid transparent;
 }
 
-.prompt li:hover, .bottom li:hover {
-  background-color: #e9ecef;
-  border-color: #dee2e6;
-  transform: translateX(2px);
+.prompt li:hover,
+.bottom li:hover {
+	background-color: #e9ecef;
+	border-color: #dee2e6;
+	transform: translateX(2px);
 }
 
 .chatName {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #212529;
-  font-size: 0.95rem;
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: #212529;
+	font-size: 0.95rem;
 }
 
 .moreButton {
-  position: absolute;
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  z-index: 1000;
-  min-width: 120px;
+	position: absolute;
+	background: white;
+	border: 1px solid #dee2e6;
+	border-radius: 0.5rem;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	z-index: 1000;
+	min-width: 120px;
 }
 
 .moreButton ul {
-  list-style: none;
-  padding: 0.5rem 0;
-  margin: 0;
+	list-style: none;
+	padding: 0.5rem 0;
+	margin: 0;
 }
 
 .moreButton li {
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #4a5568;
+	padding: 0.75rem 1rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	color: #4a5568;
 }
 
 .moreButton li:hover {
-  background-color: #f8f9fa;
-  color: #2d3748;
+	background-color: #f8f9fa;
+	color: #2d3748;
 }
 
 .right {
-  margin-left: 18%;
-  margin-right: 10%;
-  padding: 2rem;
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  transition: all 0.3s ease;
-  background-color: #ffffff;
+	margin-left: 18%;
+	margin-right: 10%;
+	padding: 2rem;
+	width: 100%;
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+	transition: all 0.3s ease;
+	background-color: #ffffff;
 }
 
 header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 0;
-  border-bottom: 1px solid #e9ecef;
-  margin-bottom: 1rem;
-  margin-left: auto;
-  margin-right: auto;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 0;
+	border-bottom: 1px solid #e9ecef;
+	margin-bottom: 1rem;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 header > * {
@@ -738,150 +746,156 @@ header > * {
 }
 
 #model {
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid #dee2e6;
-  font-size: 0.95rem;
-  transition: all 0.2s ease;
-  cursor: pointer;
+	padding: 0.75rem;
+	border-radius: 0.5rem;
+	border: 1px solid #dee2e6;
+	font-size: 0.95rem;
+	transition: all 0.2s ease;
+	cursor: pointer;
 }
 
 #model:hover {
-  border-color: #adb5bd;
+	border-color: #adb5bd;
 }
 
 .blog img {
-  height: 2.25rem;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-  border-radius: 50%;
+	height: 2.25rem;
+	cursor: pointer;
+	transition: transform 0.2s ease;
+	border-radius: 50%;
 }
 
 .blog img:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+	transform: scale(1.1);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .allChatContent {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overflow-wrap: anywhere;
-  word-break: break-all;
-  padding: 1rem 0;
-  scroll-behavior: smooth;
-  width: 90%;
-  padding: 1%;
-  margin-left: 5%
+	flex: 1;
+	overflow-y: auto;
+	overflow-x: hidden;
+	overflow-wrap: anywhere;
+	word-break: break-all;
+	padding: 1rem 0;
+	scroll-behavior: smooth;
+	width: 90%;
+	padding: 1%;
+	margin-left: 5%;
 }
 
 .allChatContent > * {
 	word-break: break-all !important;
-	overflow-wrap:anywhere;
-	
+	overflow-wrap: anywhere;
 }
 
 .chatContent {
-  margin-bottom: 1.5rem;
-  animation: fadeIn 0.3s ease;
+	margin-bottom: 1.5rem;
+	animation: fadeIn 0.3s ease;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 .user {
-  background-color: #e3f2fd;
-  padding: 1.25rem;
-  border-radius: 0.75rem;
-  margin: 1rem 0;
-  max-width: 80%;
-  margin-left: auto;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+	background-color: #e3f2fd;
+	padding: 1.25rem;
+	border-radius: 0.75rem;
+	margin: 1rem 0;
+	max-width: 80%;
+	margin-left: auto;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .assistant {
-  background-color: #f8f9fa;
-  padding: 1.25rem;
-  border-radius: 0.75rem;
-  margin: 1rem 0;
-  max-width: 80%;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+	background-color: #f8f9fa;
+	padding: 1.25rem;
+	border-radius: 0.75rem;
+	margin: 1rem 0;
+	max-width: 80%;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .msgInput {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.25rem 0;
-  border-top: 1px solid #e9ecef;
-  background-color: #ffffff;
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 1.25rem 0;
+	border-top: 1px solid #e9ecef;
+	background-color: #ffffff;
 }
 
 textarea {
-  flex: 1;
-  min-height: 2.5rem;
-  max-height: 150px;
-  padding: 1rem;
-  border: 1px solid #dee2e6;
-  border-radius: 0.75rem;
-  resize: none;
-  font-family: inherit;
-  line-height: 1.6;
-  font-size: 0.95rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+	flex: 1;
+	min-height: 2.5rem;
+	max-height: 150px;
+	padding: 1rem;
+	border: 1px solid #dee2e6;
+	border-radius: 0.75rem;
+	resize: none;
+	font-family: inherit;
+	line-height: 1.6;
+	font-size: 0.95rem;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 textarea:focus {
-  outline: none;
-  border-color: #86b7fe;
-  box-shadow: 0 0 0 0.25rem rgba(13,110,253,0.15);
+	outline: none;
+	border-color: #86b7fe;
+	box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
 }
 
 .sendButton {
-  background: none;
-  border: none;
-  padding: 0.75rem;
-  cursor: pointer;
-  color: #6c757d;
-  border-radius: 0.5rem;
-  transition: all 0.2s ease;
+	background: none;
+	border: none;
+	padding: 0.75rem;
+	cursor: pointer;
+	color: #6c757d;
+	border-radius: 0.5rem;
+	transition: all 0.2s ease;
 }
 
 .sendButton:hover {
-  background-color: #e9ecef;
-  color: #212529;
-  transform: scale(1.05);
+	background-color: #e9ecef;
+	color: #212529;
+	transform: scale(1.05);
 }
 
 @media (max-width: 768px) {
-  .left {
-    width: 80%;
-    z-index: 1000;
-  }
-  
-  .right {
-    margin-left: 0;
-    width: 100%;
-    padding: 1rem;
-  }
-  
-  .user, .assistant {
-    max-width: 90%;
-  }
-  
-  textarea {
-    font-size: 16px; /* Prevents zoom on mobile */
-  }
-  
-  .msgInput {
-    padding: 1rem 0;
-  }
-  
-  header {
-    padding: 0.75rem 0;
-  }
+	.left {
+		width: 80%;
+		z-index: 1000;
+	}
+
+	.right {
+		margin-left: 0;
+		width: 100%;
+		padding: 1rem;
+	}
+
+	.user,
+	.assistant {
+		max-width: 90%;
+	}
+
+	textarea {
+		font-size: 16px; /* Prevents zoom on mobile */
+	}
+
+	.msgInput {
+		padding: 1rem 0;
+	}
+
+	header {
+		padding: 0.75rem 0;
+	}
 }
 </style>
