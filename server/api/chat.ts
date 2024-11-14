@@ -21,7 +21,11 @@ const client = new OpenAI({
 export default defineEventHandler(async (event) => {
 	const { res } = event.node;
 	const body: EventBody = await readBody(event);
-	res.writeHead(200, { 'Content-Type': 'text/plain' });
+	// res.writeHead(200, { 'Content-Type': 'text/plain' });
+	res.setHeader('Cache-Control', 'no-cache');
+	res.setHeader('Content-Type', 'text/event-stream');
+	res.setHeader('Connection', 'keep-alive');
+	res.flushHeaders();
 	const { model, messages } = body;
 	try {
 		const response = await client.chat.completions.create({
@@ -36,8 +40,9 @@ export default defineEventHandler(async (event) => {
 			}
 		} catch (e) {
 			console.error(e);
+			res.end();
 		}
-    res.end()
+		res.end();
 	} catch (error) {
 		console.error(error);
 		event.node.res.statusCode = 500;

@@ -478,14 +478,20 @@ const sendMsgToService = async () => {
 			messages: currentChat.value.content,
 		}),
 	});
-	const decoder = new TextDecoder('utf-8');
-	for await (const value of res.body) {
-		try{
-			const chunk = decoder.decode(value);
-			newText.value += chunk;
-		}catch(e){
-			console.error(e);
-		}
+	// const decoder = new TextDecoder('utf-8');
+	// for await (const value of res.body) {
+	// 	try{
+	// 		const chunk = decoder.decode(value);
+	// 		newText.value += chunk;
+	// 	}catch(e){
+	// 		console.error(e);
+	// 	}
+	// }
+	const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+	while (true) {
+		const { value, done } = await reader.read();
+		if (done) break;
+		newText.value += value;
 	}
 	currentChat.value.content.push({
 		role: 'assistant',
