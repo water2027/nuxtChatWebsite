@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 	const { res } = event.node;
 	const body: EventBody = await readBody(event);
 	// res.writeHead(200, { 'Content-Type': 'text/plain' });
-	res.setHeader('Cache-Control', 'no-cache');
+	res.setHeader('Cache-Control', 'no-cache, no-transform');
 	res.setHeader('Content-Type', 'text/event-stream');
 	res.setHeader('Connection', 'keep-alive');
 	res.flushHeaders();
